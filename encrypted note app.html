@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Vault - Hacker Edition</title>
+    <style>
+        /* --- CSS: THE HACKER THEME --- */
+        body {
+            background-color: #0d0d0d;
+            color: #00ff41;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .terminal-window {
+            width: 100%;
+            max-width: 600px;
+            background-color: #000;
+            border: 2px solid #00ff41;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            border-bottom: 1px dashed #00ff41;
+            padding-bottom: 15px;
+            margin-top: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h3 {
+            margin-top: 30px;
+            border-left: 4px solid #00ff41;
+            padding-left: 10px;
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        /* Styling Inputs to look like terminal */
+        input[type="text"], 
+        input[type="password"], 
+        textarea, 
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background-color: #111;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            font-family: inherit;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            background-color: #222;
+            box-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #000;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background-color: #00ff41;
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.8);
+        }
+
+        #output-area {
+            margin-top: 25px;
+            padding: 15px;
+            border: 1px dashed #00ff41;
+            background: #050505;
+            min-height: 60px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            display: none; /* Hidden by default */
+        }
+
+        .success { color: #00ff41; }
+        .error { color: #ff3333; border-color: #ff3333; }
+
+        /* Custom scrollbar for Webkit */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #00ff41; }
+    </style>
+</head>
+<body>
+
+    <div class="terminal-window">
+        <h1>Encrypted Note App</h1>
+        
+        <h3>>> SYSTEM: CREATE ENCRYPTED FILE</h3>
+        
+        <label>> ENTER SECRET MESSAGE:</label>
+        <textarea id="encryptText" placeholder="Type confidential data here..."></textarea>
+        
+        <label>> SET PASSWORD (ENCRYPTION KEY):</label>
+        <input id="encryptPassword" type="password" placeholder="********" />
+        
+        <label>> OUTPUT FILENAME:</label>
+        <input id="filename" type="text" value="top_secret.txt" />
+        
+        <button onclick="encryptAndSave()">[ ENCRYPT & DOWNLOAD ]</button>
+
+
+        <h3>>> SYSTEM: DECRYPT EXISTING FILE</h3>
+        
+        <label>> UPLOAD TARGET FILE:</label>
+        <input type="file" id="decryptFile" />
+        
+        <label>> ENTER ACCESS PASSWORD:</label>
+        <input id="decryptPassword" type="password" placeholder="********" />
+        
+        <button onclick="decryptAndRead()">[ DECRYPT & READ ]</button>
+
+        <h3>>> SYSTEM: APPEND TO EXISTING FILE</h3>
+        
+        <label>> UPLOAD FILE TO APPEND:</label>
+        <input type="file" id="appendFile" />
+        
+        <label>> NEW NOTE TO APPEND:</label>
+        <textarea id="appendText" placeholder="Type new note here..."></textarea>
+        
+        <label>> ENTER PASSWORD:</label>
+        <input id="appendPassword" type="password" placeholder="********" />
+        
+        <button onclick="appendAndSave()">[ APPEND & DOWNLOAD ]</button>
+
+        <div id="output-area"></div>
+    </div>
+
+    <script>
+        /* --- JAVASCRIPT LOGIC --- */
+
+        const MARKER = "[SECURE]"; 
+
+        function getKey(password) {
+            let k = 0;
+            for (let i = 0; i < password.length; i++) {
+                k += password.charCodeAt(i);
+            }
+            return k;
+        }
+
+        function encryptText(text, key, digit = 0) {
+            let out = "";
+            key = key % 26;
+            if (digit === 0) digit = key;
+            digit = digit % 10;
+
+            for (let i = 0; i < text.length; i++) {
+                let code = text.charCodeAt(i);
+                let char = text[i];
+
+                if (char >= 'A' && char <= 'Z') {
+                    out += String.fromCharCode(65 + (code - 65 + key) % 26);
+                } else if (char >= 'a' && char <= 'z') {
+                    out += String.fromCharCode(97 + (code - 97 + key) % 26);
+                } else if (char >= '0' && char <= '9') {
+                    out += String.fromCharCode(48 + (code - 48 + digit) % 10);
+                } else {
+                    out += char;
+                }
+            }
+            return out;
+        }
+
+        function decryptText(text, key) {
+            let letterKey = key % 26;
+            let digitKey = letterKey % 10;
+            return encryptText(text, 26 - letterKey, 10 - digitKey);
+        }
+
+        function encryptAndSave() {
+            const text = document.getElementById('encryptText').value;
+            const password = document.getElementById('encryptPassword').value;
+            const filename = document.getElementById('filename').value || "secret.txt";
+
+            if (!text || !password) {
+                alert("[ERROR] Text and Password are required.");
+                return;
+            }
+
+            const key = getKey(password);
+            const contentToEncrypt = MARKER + text; 
+            const encryptedContent = encryptText(contentToEncrypt, key);
+
+            downloadFile(filename, encryptedContent);
+        }
+
+        function decryptAndRead() {
+            const fileInput = document.getElementById('decryptFile');
+            const password = document.getElementById('decryptPassword').value;
+            const outputDiv = document.getElementById('output-area');
+
+            if (fileInput.files.length === 0) {
+                alert("[ERROR] Please select a file first.");
+                return;
+            }
+            if (!password) {
+                alert("[ERROR] Password required.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            outputDiv.style.display = 'block';
+            outputDiv.innerHTML = "Accessing File System...";
+            outputDiv.className = "";
+
+            reader.onload = function(e) {
+                const encryptedContent = e.target.result;
+                const key = getKey(password);
+                
+                const decryptedContent = decryptText(encryptedContent, key);
+
+                if (decryptedContent.startsWith(MARKER)) {
+                    const actualMessage = decryptedContent.substring(MARKER.length);
+                    outputDiv.className = "success";
+                    outputDiv.innerHTML = "<strong>>> ACCESS GRANTED:</strong><br><br>" + actualMessage;
+                } else {
+                    outputDiv.className = "error";
+                    outputDiv.innerHTML = ">> ACCESS DENIED: INCORRECT PASSWORD OR CORRUPT FILE.";
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function appendAndSave() {
+            const fileInput = document.getElementById('appendFile');
+            const newText = document.getElementById('appendText').value;
+            const password = document.getElementById('appendPassword').value;
+
+            if (fileInput.files.length === 0) {
+                alert("[ERROR] Please select a file first.");
+                return;
+            }
+            if (!newText || !password) {
+                alert("[ERROR] Text and Password are required.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const encryptedContent = e.target.result;
+                const key = getKey(password);
+                const decryptedContent = decryptText(encryptedContent, key);
+
+                if (decryptedContent.startsWith(MARKER)) {
+                    const existingText = decryptedContent.substring(MARKER.length);
+                    const updatedText = existingText + "\n\n" + newText;
+                    const contentToEncrypt = MARKER + updatedText;
+                    const newEncryptedContent = encryptText(contentToEncrypt, key);
+                    
+                    downloadFile(file.name, newEncryptedContent);
+                } else {
+                    alert(">> ACCESS DENIED: INCORRECT PASSWORD OR CORRUPT FILE.");
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function downloadFile(filename, text) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+    </script>
+</body>
+</html>
